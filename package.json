@@ -1,0 +1,17 @@
+{
+  "name": "xyz-portal",
+  "version": "1.0.0",
+  "description": "Lightweight app portal",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node --watch app.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "engines": {
+    "node": "20"
+  }
+}
