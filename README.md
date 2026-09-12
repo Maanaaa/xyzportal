@@ -1,53 +1,122 @@
-# XYZ Portal 🚀
+# XYZ Portal
 
-Lightweight app portal with dark modern design, Nginx auth support, and automatic favicon fetching.
+A lightweight, modern app portal with dark UI, Nginx auth integration, and automatic favicon fetching. Perfect for self-hosted ecosystems.
 
-## Features
+**Features:** Minimal (~50MB), dark theme, responsive design, secure auth headers, auto-favicon caching, zero framework bloat.
 
-✨ **Lightweight** - Minimal dependencies, ~50MB docker image  
-🔐 **Secure** - Nginx auth integration via headers  
-🎨 **Modern Dark UI** - Inspired by Gokapi, NextCloud, Portainer  
-⚡ **Fast** - No framework bloat, pure Node.js + vanilla JS  
-🖼️ **Auto Favicons** - Fetches and caches app icons  
-📱 **Responsive** - Mobile-friendly design  
+## Quick Start
 
-## Architecture
+### Docker (Terminal)
 
+```bash
+# Build image
+docker build -t xyz-portal .
+
+# Run container
+docker run -p 3000:3000 \
+  -e NODE_ENV=production \
+  xyz-portal
+
+# Or with docker-compose
+docker-compose up -d
 ```
-XYZ Portal (Container)
-    ↑
-    └─ Nginx (Reverse proxy with auth)
-        ↑
-        └─ Browser
+
+Visit `http://localhost:3000` (auth will fail without Nginx header - that's normal)
+
+### Docker Compose (Recommended)
+
+```bash
+docker-compose up -d
 ```
 
-1. Nginx handles authentication (basic auth)
-2. Nginx passes authenticated username via `Remote-User` header
-3. Portal validates header and serves authenticated content
-4. Portal reads apps from `apps.json` and displays them
-5. Frontend fetches favicons automatically via Google Favicon API
+Check status:
+```bash
+docker-compose ps
+docker-compose logs -f
+```
 
-## Setup
+### Portainer
+
+1. **Stacks** → **Add Stack**
+2. Click **Upload** → select `docker-compose.yml`
+3. Name: `xyz-portal`
+4. Click **Deploy**
 
 ### Local Development
 
 ```bash
-# Install dependencies
 npm install
-
-# Run dev server
-npm run dev
-
-# Or production
-npm start
+npm run dev       # With watch
+npm start         # Production
 ```
 
-App will be available at `http://localhost:3000`  
-⚠️ Note: No auth header = 401 Unauthorized (normal, auth is handled by nginx in production)
-
-### Docker
+## Deployment on VPS
 
 ```bash
+# 1. Clone repo
+cd /opt/xyz-portal
+git clone <your-repo> .
+
+# 2. Update apps.json with your apps
+nano apps.json
+
+# 3. Configure Nginx (update domain and paths)
+sudo cp nginxauth.conf /etc/nginx/sites-available/xyz
+sudo ln -s /etc/nginx/sites-available/xyz /etc/nginx/sites-enabled/
+
+# 4. Create basic auth
+sudo htpasswd -c /etc/nginx/.htpasswd-xyz your-username
+
+# 5. Reload Nginx
+sudo systemctl reload nginx
+
+# 6. Deploy with docker-compose
+docker-compose up -d
+```
+
+## Configuration
+
+**apps.json** - List your applications:
+```json
+[
+  {
+    "name": "Nextcloud",
+    "description": "Cloud Storage",
+    "url": "https://atlas.theo-manya.fr"
+  }
+]
+```
+
+**Nginx** - Edit `nginxauth.conf`:
+- Update `server_name` to your domain
+- Update SSL certificate paths
+- Update upstream proxy if needed
+
+## API
+
+- `GET /` - Portal UI (requires `Remote-User` header)
+- `GET /api/apps` - List apps
+- `GET /api/favicon?url=https://example.com` - Get favicon
+
+## Troubleshooting
+
+**401 Unauthorized** - Check Nginx config has `proxy_set_header Remote-User $remote_user;`
+
+**Favicons not loading** - Container needs internet. Falls back to placeholder if API fails.
+
+**Container won't start** - Check logs: `docker-compose logs xyz-portal`
+
+## Makefile Commands
+
+```bash
+make dev        # Development server
+make build      # Build Docker image
+make deploy     # Start with docker-compose
+make logs       # View container logs
+make shell      # SSH into container
+```
+
+See [PORTAINER.md](PORTAINER.md) for detailed Portainer guide.
 # Build image
 docker build -t xyz-portal:latest .
 
