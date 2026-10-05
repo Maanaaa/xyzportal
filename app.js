@@ -32,6 +32,65 @@ app.get('/api/apps', async (req, res) => {
   }
 });
 
+// API pour ajouter une app
+app.post('/api/apps', async (req, res) => {
+  try {
+    const { name, description, url } = req.body;
+    if (!name || !name.trim() || !url || !url.trim()) {
+      return res.status(400).json({ error: 'Le nom et l\'URL sont requis.' });
+    }
+
+    let formattedUrl = url.trim();
+    if (!/^https?:\/\//i.test(formattedUrl)) {
+      formattedUrl = 'https://' + formattedUrl;
+    }
+
+    const appsFilePath = path.join(__dirname, 'apps.json');
+    let apps = [];
+    try {
+      const appsData = await fs.readFile(appsFilePath, 'utf-8');
+      apps = JSON.parse(appsData);
+    } catch (e) {
+      apps = [];
+    }
+
+    const newApp = {
+      name: name.trim(),
+      description: (description || '').trim(),
+      url: formattedUrl
+    };
+
+    apps.push(newApp);
+    await fs.writeFile(appsFilePath, JSON.stringify(apps, null, 2), 'utf-8');
+    res.status(201).json(newApp);
+  } catch (error) {
+    console.error('Error adding app:', error);
+    res.status(500).json({ error: 'Échec de l\'ajout du site' });
+  }
+});
+
+// API pour supprimer une app
+app.delete('/api/apps', async (req, res) => {
+  try {
+    const { url, name } = req.body;
+    if (!url && !name) {
+      return res.status(400).json({ error: 'URL ou nom requis' });
+    }
+
+    const appsFilePath = path.join(__dirname, 'apps.json');
+    const appsData = await fs.readFile(appsFilePath, 'utf-8');
+    let apps = JSON.parse(appsData);
+
+    apps = apps.filter(app => app.url !== url && app.name !== name);
+
+    await fs.writeFile(appsFilePath, JSON.stringify(apps, null, 2), 'utf-8');
+    res.json({ success: true, apps });
+  } catch (error) {
+    console.error('Error deleting app:', error);
+    res.status(500).json({ error: 'Échec de la suppression du site' });
+  }
+});
+
 // Cache for favicons
 const faviconCache = {};
 
