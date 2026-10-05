@@ -46,17 +46,31 @@ async function loadApps() {
             
             return `
             <div class="app-card">
-                <button 
-                    class="delete-app-btn" 
-                    data-url="${escapeHtml(app.url)}" 
-                    data-name="${escapeHtml(app.name)}"
-                    title="Supprimer ${escapeHtml(app.name)}"
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                    </svg>
-                </button>
+                <div class="card-actions">
+                    <button 
+                        class="edit-app-btn" 
+                        data-url="${escapeHtml(app.url)}" 
+                        data-name="${escapeHtml(app.name)}"
+                        data-description="${escapeHtml(app.description)}"
+                        title="Modifier ${escapeHtml(app.name)}"
+                    >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    <button 
+                        class="delete-app-btn" 
+                        data-url="${escapeHtml(app.url)}" 
+                        data-name="${escapeHtml(app.name)}"
+                        title="Supprimer ${escapeHtml(app.name)}"
+                    >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
                 <div class="app-header">
                     <div class="app-icon">
                         <img 
@@ -81,6 +95,20 @@ async function loadApps() {
             </div>
             `;
         }).join('');
+
+        // Attach event listeners for edit buttons
+        document.querySelectorAll('.edit-app-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const url = btn.getAttribute('data-url');
+                const name = btn.getAttribute('data-name');
+                const description = btn.getAttribute('data-description');
+                
+                openAppModal(true, { url, name, description });
+            });
+        });
 
         // Attach event listeners for delete buttons
         document.querySelectorAll('.delete-app-btn').forEach(btn => {
@@ -135,9 +163,12 @@ async function deleteApp(url, name) {
     }
 }
 
+let openAppModal;
+
 // Modal functions
 function initModal() {
     const modal = document.getElementById('add-modal');
+    const modalTitle = document.getElementById('modal-title');
     const openBtn = document.getElementById('open-modal-btn');
     const closeBtn = document.getElementById('close-modal-btn');
     const cancelBtn = document.getElementById('cancel-btn');
@@ -146,20 +177,35 @@ function initModal() {
     const submitBtn = document.getElementById('submit-btn');
     const submitText = document.getElementById('submit-text');
     const submitSpinner = document.getElementById('submit-spinner');
+    const originalUrlInput = document.getElementById('app-original-url');
 
-    function openModal() {
+    openAppModal = function(isEdit = false, appData = null) {
         form.reset();
         modalError.style.display = 'none';
         modalError.textContent = '';
+        
+        if (isEdit && appData) {
+            modalTitle.textContent = 'Modifier le site';
+            submitText.textContent = 'Mettre à jour';
+            originalUrlInput.value = appData.url;
+            document.getElementById('app-name').value = appData.name || '';
+            document.getElementById('app-description').value = appData.description || '';
+            document.getElementById('app-url').value = appData.url || '';
+        } else {
+            modalTitle.textContent = 'Ajouter un site';
+            submitText.textContent = 'Enregistrer';
+            originalUrlInput.value = '';
+        }
+
         modal.style.display = 'flex';
         document.getElementById('app-name').focus();
-    }
+    };
 
     function closeModal() {
         modal.style.display = 'none';
     }
 
-    openBtn.addEventListener('click', openModal);
+    openBtn.addEventListener('click', () => openAppModal(false));
     closeBtn.addEventListener('click', closeModal);
     cancelBtn.addEventListener('click', closeModal);
 
@@ -181,6 +227,7 @@ function initModal() {
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        const originalUrl = originalUrlInput.value;
         const name = document.getElementById('app-name').value.trim();
         const description = document.getElementById('app-description').value.trim();
         const url = document.getElementById('app-url').value.trim();
@@ -198,18 +245,25 @@ function initModal() {
         modalError.style.display = 'none';
 
         try {
-            const response = await fetch('/api/apps', {
-                method: 'POST',
+            const isEdit = Boolean(originalUrl);
+            const endpoint = '/api/apps';
+            const method = isEdit ? 'PUT' : 'POST';
+            const payload = isEdit 
+                ? { originalUrl, name, description, url }
+                : { name, description, url };
+
+            const response = await fetch(endpoint, {
+                method,
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ name, description, url })
+                body: JSON.stringify(payload)
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || 'Erreur lors de l\'ajout du site');
+                throw new Error(data.error || 'Erreur lors de l\'enregistrement');
             }
 
             closeModal();
@@ -243,6 +297,6 @@ function escapeHtml(text) {
 
 // Load apps and init modal on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
-    loadApps();
     initModal();
+    loadApps();
 });

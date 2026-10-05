@@ -69,6 +69,42 @@ app.post('/api/apps', async (req, res) => {
   }
 });
 
+// API pour modifier une app
+app.put('/api/apps', async (req, res) => {
+  try {
+    const { originalUrl, name, description, url } = req.body;
+    if (!originalUrl || !name || !name.trim() || !url || !url.trim()) {
+      return res.status(400).json({ error: 'L\'URL d\'origine, le nom et la nouvelle URL sont requis.' });
+    }
+
+    let formattedUrl = url.trim();
+    if (!/^https?:\/\//i.test(formattedUrl)) {
+      formattedUrl = 'https://' + formattedUrl;
+    }
+
+    const appsFilePath = path.join(__dirname, 'apps.json');
+    const appsData = await fs.readFile(appsFilePath, 'utf-8');
+    let apps = JSON.parse(appsData);
+
+    const index = apps.findIndex(app => app.url === originalUrl || app.name === name);
+    if (index === -1) {
+      return res.status(404).json({ error: 'Site non trouvé' });
+    }
+
+    apps[index] = {
+      name: name.trim(),
+      description: (description || '').trim(),
+      url: formattedUrl
+    };
+
+    await fs.writeFile(appsFilePath, JSON.stringify(apps, null, 2), 'utf-8');
+    res.json(apps[index]);
+  } catch (error) {
+    console.error('Error updating app:', error);
+    res.status(500).json({ error: 'Échec de la modification du site' });
+  }
+});
+
 // API pour supprimer une app
 app.delete('/api/apps', async (req, res) => {
   try {

@@ -280,11 +280,18 @@ footer {
     }
 }
 
-/* Delete Button on App Card */
-.delete-app-btn {
+/* Card Top Actions */
+.card-actions {
     position: absolute;
     top: 12px;
     right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 10;
+}
+
+.edit-app-btn, .delete-app-btn {
     width: 28px;
     height: 28px;
     border-radius: 6px;
@@ -297,11 +304,17 @@ footer {
     cursor: pointer;
     opacity: 0;
     transition: all 0.2s ease;
-    z-index: 10;
 }
 
+.app-card:hover .edit-app-btn,
 .app-card:hover .delete-app-btn {
     opacity: 0.7;
+}
+
+.edit-app-btn:hover {
+    opacity: 1 !important;
+    background-color: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
 }
 
 .delete-app-btn:hover {
